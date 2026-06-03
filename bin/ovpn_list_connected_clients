@@ -1,0 +1,42 @@
+#!/bin/bash
+
+#
+# Check for connected OpenVPN clients
+#
+
+if [ "$DEBUG" == "1" ]; then
+    set -x
+fi
+
+set -e
+
+if [ -z "$OPENVPN" ]; then
+    export OPENVPN="$PWD"
+fi
+
+if ! source "$OPENVPN/ovpn_env.sh"; then
+    echo "Could not source $OPENVPN/ovpn_env.sh."
+    exit 1
+fi
+
+if [ -z "$EASYRSA_PKI" ]; then
+    export EASYRSA_PKI="$OPENVPN/pki"
+fi
+
+if [ ! -f "$OPENVPN/openvpn-status.log" ]; then
+    echo "Unable to find the OpenVPN status log, please make sure the OpenVPN server is running and the status log is configured correctly." >&2
+    exit 1
+fi
+
+
+tail -F "$OPENVPN/openvpn-status.log" | while read line; do
+    if [[ "$line" == *"CLIENT_LIST"* ]]; then
+        client=$(echo "$line" | cut -d, -f2)
+        if [ -f "$EASYRSA_PKI/issued/${client}.crt" ]; then
+            echo "Client ${client} is connected."
+        else
+            echo "Client ${client} is connected but no certificate found."
+        fi
+    fi
+done
+
