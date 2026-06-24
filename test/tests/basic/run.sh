@@ -15,7 +15,7 @@ docker run -v $OVPN_DATA:/etc/openvpn --rm $IMG ovpn_genconfig -u udp://$SERV_IP
 # nopass is insecure
 docker run -v $OVPN_DATA:/etc/openvpn --rm -i -e "EASYRSA_BATCH=1" -e "EASYRSA_REQ_CN=Travis-CI Test CA" $IMG ovpn_initpki nopass
 
-docker run -v $OVPN_DATA:/etc/openvpn --rm -i $IMG easyrsa build-client-full $CLIENT nopass
+docker run -v $OVPN_DATA:/etc/openvpn --rm -i -e "EASYRSA_BATCH=1" $IMG easyrsa build-client-full $CLIENT nopass
 
 docker run -v $OVPN_DATA:/etc/openvpn --rm $IMG ovpn_getclient $CLIENT | tee $CLIENT_DIR/config.ovpn
 
@@ -28,7 +28,7 @@ trap "{ jobs -p | xargs -r kill; wait; }" EXIT
 docker run --name "ovpn-test" -v $OVPN_DATA:/etc/openvpn --rm -e DEBUG --cap-add=NET_ADMIN $IMG &
 
 for i in $(seq 10); do
-    SERV_IP_INTERNAL=$(docker inspect --format '{{ .NetworkSettings.IPAddress }}' "ovpn-test" 2>/dev/null || true)
+    SERV_IP_INTERNAL=$(docker inspect --format '{{ range .NetworkSettings.Networks }}{{ .IPAddress }}{{ end }}' "ovpn-test" 2>/dev/null || true)
     test -n "$SERV_IP_INTERNAL" && break
     sleep 0.1
 done
