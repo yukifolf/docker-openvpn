@@ -22,15 +22,22 @@ fi
 # Ensure the otp folder is present
 [ -d /etc/openvpn/otp ] || mkdir -p /etc/openvpn/otp
 
+if [[ "$1" == */* ]]; then
+    echo "Invalid username: must not contain '/'"
+    exit 1
+fi
+
+otp_file="/etc/openvpn/otp/${1}.google_authenticator"
+
 # Binary is present in image, save an $user.google_authenticator file in /etc/openvpn/otp
 if [ "$2" == "interactive" ]; then
     # Authenticator will ask for other parameters. User can choose rate limit, token reuse policy and time window policy
     # Always use time base OTP otherwise storage for counters must be configured somewhere in volume
-    google-authenticator --time-based --force --qr-mode=UTF8 --issuer="${OVPN_CN}" -l "${1}@${OVPN_CN}" -s /etc/openvpn/otp/${1}.google_authenticator
+    google-authenticator --time-based --force --qr-mode=UTF8 --issuer="${OVPN_CN}" -l "${1}@${OVPN_CN}" -s "$otp_file"
 else
     # Skip confirmation if not running in interctive mode. Essential for integration tests.
     google-authenticator --time-based --disallow-reuse --force --rate-limit=3 --rate-time=30 --window-size=3 \
-        --issuer="${OVPN_CN}" -l "${1}@${OVPN_CN}" -s /etc/openvpn/otp/${1}.google_authenticator --no-confirm
+        --issuer="${OVPN_CN}" -l "${1}@${OVPN_CN}" -s "$otp_file" --no-confirm
 fi
 
 # The OpenVPN server drops privileges to "user nobody" (see ovpn_genconfig), so the
@@ -38,4 +45,4 @@ fi
 # pam_google_authenticator (configured with user=nobody) can read them; keep them mode 0400
 # so the module's strict ownership/permission check still passes.
 chown -R nobody:nogroup /etc/openvpn/otp
-chmod 0400 /etc/openvpn/otp/${1}.google_authenticator
+chmod 0400 "$otp_file"
