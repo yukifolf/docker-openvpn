@@ -21,14 +21,16 @@ docker run -v $OVPN_DATA:/etc/openvpn --rm $IMG ovpn_genconfig -u udp://$SERV_IP
 docker run -v $OVPN_DATA:/etc/openvpn --rm $IMG cat /etc/openvpn/openvpn.conf | grep 'reneg-sec 0' || abort 'reneg-sec not set to 0 in server config'
 
 # nopass is insecure
-docker run -v $OVPN_DATA:/etc/openvpn --rm -it -e "EASYRSA_BATCH=1" -e "EASYRSA_REQ_CN=Travis-CI Test CA" $IMG ovpn_initpki nopass
+docker run -v $OVPN_DATA:/etc/openvpn --rm -i -e "EASYRSA_BATCH=1" -e "EASYRSA_REQ_CN=Travis-CI Test CA" $IMG ovpn_initpki nopass
 
-docker run -v $OVPN_DATA:/etc/openvpn --rm -it $IMG easyrsa build-client-full $CLIENT nopass
+docker run -v $OVPN_DATA:/etc/openvpn --rm -i -e "EASYRSA_BATCH=1" $IMG easyrsa build-client-full $CLIENT nopass
 
-# Generate OTP credentials for user named test, should return QR code for test user
-docker run -v $OVPN_DATA:/etc/openvpn --rm -it $IMG ovpn_otp_user $OTP_USER | tee $CLIENT_DIR/qrcode.txt
-# Ensure a chart link is printed in client OTP configuration
-grep 'https://www.google.com/chart' $CLIENT_DIR/qrcode.txt || abort 'Link to chart not generated'
+# Generate OTP credentials for the user. ovpn_otp_user runs google-authenticator,
+# which only renders the scannable QR code to an interactive TTY and (as of
+# google-authenticator 1.x) no longer prints the deprecated Google Charts URL.
+# CI runs without a TTY, so successful enrollment is verified via the secret key
+# and emergency scratch codes below rather than a QR/chart artifact.
+docker run -v $OVPN_DATA:/etc/openvpn --rm -i $IMG ovpn_otp_user $OTP_USER | tee $CLIENT_DIR/qrcode.txt
 grep 'Your new secret key is:' $CLIENT_DIR/qrcode.txt || abort 'Secret key is missing'
 # Extract an emergency code from textual output, grepping for line and trimming spaces
 OTP_TOKEN=$(grep -A1 'Your emergency scratch codes are' $CLIENT_DIR/qrcode.txt | tail -1 | tr -d '[[:space:]]')
@@ -53,7 +55,7 @@ trap "{ jobs -p | xargs -r kill; wait; }" EXIT
 docker run --name "ovpn-test" -v $OVPN_DATA:/etc/openvpn --rm --cap-add=NET_ADMIN $IMG &
 
 for i in $(seq 10); do
-    SERV_IP_INTERNAL=$(docker inspect --format '{{ .NetworkSettings.IPAddress }}' "ovpn-test" 2>/dev/null || true)
+    SERV_IP_INTERNAL=$(docker inspect --format '{{ range .NetworkSettings.Networks }}{{ .IPAddress }}{{ end }}' "ovpn-test" 2>/dev/null || true)
     test -n "$SERV_IP_INTERNAL" && break
     sleep 0.1
 done

@@ -43,9 +43,9 @@ ovpn_genconfig \
     -m 1337 \
 
 
-EASYRSA_BATCH=1 EASYRSA_REQ_CN="Travis-CI Test CA" ovpn_initpki nopass
+EASYRSA_BATCH=1 EASYRSA_REQ_CN="Test CA" ovpn_initpki nopass
 
-easyrsa build-client-full test1 nopass 2>/dev/null
+EASYRSA_BATCH=1 easyrsa build-client-full test1 nopass
 
 ovpn_getclient test1 > "${TEST1_OVPN}"
 
@@ -63,8 +63,8 @@ test_config "${TEST1_OVPN}" "^tun-mtu\s\+1337"
 #
 ovpn_genconfig -u udp://$SERV_IP -E "remote $SERV_IP 443 tcp" -E "remote vpn.example.com 443 tcp"
 # nopass is insecure
-EASYRSA_BATCH=1 EASYRSA_REQ_CN="Travis-CI Test CA" ovpn_initpki nopass
-easyrsa build-client-full client-fallback nopass
+EASYRSA_BATCH=1 EASYRSA_REQ_CN="Test CA" ovpn_initpki nopass
+EASYRSA_BATCH=1 easyrsa build-client-full client-fallback nopass
 ovpn_getclient client-fallback > "${TEST1_OVPN}"
 
 test_config "${TEST1_OVPN}" "^remote\s\+$SERV_IP\s\+443\s\+tcp"
@@ -76,8 +76,8 @@ test_config "${TEST1_OVPN}" "^remote\s\+vpn.example.com\s\+443\s\+tcp"
 #
 ovpn_genconfig -d -u udp://$SERV_IP -r "172.33.33.0/24" -r "172.34.34.0/24"
 # nopass is insecure
-EASYRSA_BATCH=1 EASYRSA_REQ_CN="Travis-CI Test CA" ovpn_initpki nopass
-easyrsa build-client-full non-defroute nopass
+EASYRSA_BATCH=1 EASYRSA_REQ_CN="Test CA" ovpn_initpki nopass
+EASYRSA_BATCH=1 easyrsa build-client-full non-defroute nopass
 ovpn_getclient non-defroute > "${TEST1_OVPN}"
 
 # The '!' inverts the match to test that the string isn't present

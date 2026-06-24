@@ -11,9 +11,14 @@ if [ ! -c /dev/net/tun ]; then
     mknod /dev/net/tun c 10 200
 fi
 
-# Run in background using bash job management, setup trap to clean-up
+# Run in background using bash job management, setup trap to clean-up.
+# --disable-dco keeps the client off Data Channel Offload: with DCO enabled, OpenVPN 2.6+
+# clients hard-reject the server's pushed compression framing (comp-lzo no) and Windows-only
+# block-outside-dns option, restart, and re-authenticate. That restart is fatal for the OTP
+# test, which authenticates with a single-use scratch code that the first (successful) attempt
+# already consumed. Disabling DCO restores the pre-DCO client behavior the tests assume.
 trap "{ jobs -p | xargs -r kill; wait; }" EXIT
-openvpn --config "$OPENVPN_CONFIG" --management 127.0.0.1 9999 &
+openvpn --config "$OPENVPN_CONFIG" --disable-dco --management 127.0.0.1 9999 &
 
 # Spin waiting for interface to exist signifying connection
 timeout=10
