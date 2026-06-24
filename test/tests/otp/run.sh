@@ -21,12 +21,12 @@ docker run -v $OVPN_DATA:/etc/openvpn --rm $IMG ovpn_genconfig -u udp://$SERV_IP
 docker run -v $OVPN_DATA:/etc/openvpn --rm $IMG cat /etc/openvpn/openvpn.conf | grep 'reneg-sec 0' || abort 'reneg-sec not set to 0 in server config'
 
 # nopass is insecure
-docker run -v $OVPN_DATA:/etc/openvpn --rm -it -e "EASYRSA_BATCH=1" -e "EASYRSA_REQ_CN=Travis-CI Test CA" $IMG ovpn_initpki nopass
+docker run -v $OVPN_DATA:/etc/openvpn --rm -i -e "EASYRSA_BATCH=1" -e "EASYRSA_REQ_CN=Travis-CI Test CA" $IMG ovpn_initpki nopass
 
-docker run -v $OVPN_DATA:/etc/openvpn --rm -it $IMG easyrsa build-client-full $CLIENT nopass
+docker run -v $OVPN_DATA:/etc/openvpn --rm -i $IMG easyrsa build-client-full $CLIENT nopass
 
 # Generate OTP credentials for user named test, should return QR code for test user
-docker run -v $OVPN_DATA:/etc/openvpn --rm -it $IMG ovpn_otp_user $OTP_USER | tee $CLIENT_DIR/qrcode.txt
+docker run -v $OVPN_DATA:/etc/openvpn --rm -i $IMG ovpn_otp_user $OTP_USER | tee $CLIENT_DIR/qrcode.txt
 # Ensure a chart link is printed in client OTP configuration
 grep 'https://www.google.com/chart' $CLIENT_DIR/qrcode.txt || abort 'Link to chart not generated'
 grep 'Your new secret key is:' $CLIENT_DIR/qrcode.txt || abort 'Secret key is missing'
