@@ -27,8 +27,10 @@ docker run -v $OVPN_DATA:/etc/openvpn --rm -i -e "EASYRSA_BATCH=1" $IMG easyrsa 
 
 # Generate OTP credentials for user named test, should return QR code for test user
 docker run -v $OVPN_DATA:/etc/openvpn --rm -i $IMG ovpn_otp_user $OTP_USER | tee $CLIENT_DIR/qrcode.txt
-# Ensure a chart link is printed in client OTP configuration
-grep 'https://www.google.com/chart' $CLIENT_DIR/qrcode.txt || abort 'Link to chart not generated'
+# Ensure a scannable QR enrollment artifact is printed in client OTP configuration.
+# Accept either the legacy (deprecated) Google Charts URL or a bare otpauth:// URI,
+# so the test survives upstream dropping the dead charts.google.com wrapper.
+grep -E 'otpauth://totp/|https://www\.google\.com/chart' $CLIENT_DIR/qrcode.txt || abort 'QR enrollment artifact (otpauth URI / chart link) not generated'
 grep 'Your new secret key is:' $CLIENT_DIR/qrcode.txt || abort 'Secret key is missing'
 # Extract an emergency code from textual output, grepping for line and trimming spaces
 OTP_TOKEN=$(grep -A1 'Your emergency scratch codes are' $CLIENT_DIR/qrcode.txt | tail -1 | tr -d '[[:space:]]')
