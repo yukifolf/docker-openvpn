@@ -1,0 +1,32 @@
+# Git
+.git
+.gitignore
+.gitattributes
+
+# CI / GitHub
+.github
+
+# Docs and project meta (not needed in the image)
+*.md
+docs
+LICENSE
+
+# Tests — the suite runs against the built image, not from inside it
+test
+
+# Local OpenVPN data / PKI — must NEVER enter an image
+ovpn-data*
+pki
+*.ovpn
+*.key
+*.crt
+*.pem
+
+# Editor / OS cruft
+.vscode
+.idea
+*.swp
+.DS_Store
+
+# Docker compose for local runs
+docker-compose*.yml
